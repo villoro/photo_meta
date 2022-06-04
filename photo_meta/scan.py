@@ -72,7 +72,13 @@ def read_everything(base_path):
     return pd.DataFrame(out)
 
 
-def scan_path(path):
+def fix_unicode(df):
+    return df.applymap(
+        lambda x: x.encode("unicode_escape").decode("utf-8") if isinstance(x, str) else x
+    )
+
+
+def scan_path(path, export_excel=False):
 
     df = read_everything(path)
 
@@ -87,7 +93,8 @@ def scan_path(path):
 
     log.info("Exporting data for scanned files")
     vdp.write_parquet(df, PATH_FILES)
-    vdp.write_excel(df, PATH_FILES_XLSX)
+    if export_excel:
+        vdp.write_excel(fix_unicode(df), PATH_FILES_XLSX)
     return df
 
 
@@ -121,7 +128,7 @@ def summarize():
     dfo = dfo.drop("updated_at_min", axis=1)
 
     log.info("Exporting summary")
-    vdp.write_excel(dfo.set_index("folder", drop=True), PATH_SUMMARY_XLSX)
+    vdp.write_excel(fix_unicode(dfo.set_index("folder", drop=True)), PATH_SUMMARY_XLSX)
     return dfo
 
 
@@ -130,16 +137,21 @@ def get_results():
     df = vdp.read_excel(PATH_SUMMARY_XLSX)
 
     aggs = {
+        "folders": pd.NamedAgg(column="folder", aggfunc="count"),
         "images": pd.NamedAgg(column="images", aggfunc="sum"),
         "files": pd.NamedAgg(column="files", aggfunc="sum"),
         "error_dt": pd.NamedAgg(column="error_dt", aggfunc="sum"),
         "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="sum"),
         "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="sum"),
+        "scan_time_minutes": pd.NamedAgg(column="scan_time_seconds", aggfunc="sum"),
         "updated_at": pd.NamedAgg(column="updated_at", aggfunc="max"),
     }
 
     # Dummy groupby to get global aggregations
     df = df.groupby(lambda _: True).agg(**aggs).set_index("updated_at", drop=True)
+
+    # Transform to minutes
+    df["scan_time_minutes"] = df["scan_time_minutes"] / 60
 
     # Add percents
     df["images_percent"] = 100 * df["images"] / df["files"]
@@ -156,5 +168,5 @@ def get_results():
         df = df[~df.index.duplicated(keep="last")]
 
     log.info("Exporting summary")
-    vdp.write_excel(df, PATH_RESULTS_XLSX)
+    vdp.write_excel(fix_unicode(df), PATH_RESULTS_XLSX)
     return df
