@@ -12,10 +12,10 @@ from docs import Doc
 
 REGEX = re.compile(r"(?P<year>\d{4})(_(?P<month>\d{2}))?(_(?P<day>\d{2}))?(.*)")
 
-PATH_FILES = f"{u.PATH_DROPBOX}/files.parquet"
-PATH_FILES_XLSX = f"{u.PATH_DROPBOX}/files.xlsx"
-PATH_SUMMARY = f"{u.PATH_DROPBOX}/summary.parquet"
-PATH_SUMMARY_XLSX = f"{u.PATH_DROPBOX}/summary.xlsx"
+PATH_FILES = f"{u.PATH_DROPBOX}/1_files.parquet"
+PATH_FILES_XLSX = f"{u.PATH_DROPBOX}/1_files.xlsx"
+PATH_SUMMARY_XLSX = f"{u.PATH_DROPBOX}/2_summary.xlsx"
+PATH_RESULTS_XLSX = f"{u.PATH_DROPBOX}/3_results.xlsx"
 
 
 def get_folder_date(path):
@@ -94,7 +94,6 @@ def scan_path(path):
 def summarize():
 
     vdp = u.get_vdropbox()
-
     df = vdp.read_parquet(PATH_FILES)
 
     for col in ["is_image", "error_dt", "error_dt_original", "missing_meta"]:
@@ -122,6 +121,40 @@ def summarize():
     dfo = dfo.drop("updated_at_min", axis=1)
 
     log.info("Exporting summary")
-    vdp.write_parquet(dfo, PATH_SUMMARY)
-    vdp.write_excel(dfo, PATH_SUMMARY_XLSX)
+    vdp.write_excel(dfo.set_index("folder", drop=True), PATH_SUMMARY_XLSX)
     return dfo
+
+
+def get_results():
+    vdp = u.get_vdropbox()
+    df = vdp.read_excel(PATH_SUMMARY_XLSX)
+
+    aggs = {
+        "images": pd.NamedAgg(column="images", aggfunc="sum"),
+        "files": pd.NamedAgg(column="files", aggfunc="sum"),
+        "error_dt": pd.NamedAgg(column="error_dt", aggfunc="sum"),
+        "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="sum"),
+        "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="sum"),
+        "updated_at": pd.NamedAgg(column="updated_at", aggfunc="max"),
+    }
+
+    # Dummy groupby to get global aggregations
+    df = df.groupby(lambda _: True).agg(**aggs).set_index("updated_at", drop=True)
+
+    # Add percents
+    df["images_percent"] = 100 * df["images"] / df["files"]
+    df["error_dt_percent"] = 100 * df["error_dt"] / df["images"]
+    df["error_dt_original_percent"] = 100 * df["error_dt_original"] / df["images"]
+    df["missing_meta_percent"] = 100 * df["missing_meta"] / df["images"]
+
+    # Add to history
+    if vdp.file_exists(PATH_RESULTS_XLSX):
+        df_history = vdp.read_excel(PATH_RESULTS_XLSX).set_index("updated_at")
+        df = pd.concat([df_history, df]).sort_index()
+
+        # Drop possible duplicated data
+        df = df[~df.index.duplicated(keep="last")]
+
+    log.info("Exporting summary")
+    vdp.write_excel(df, PATH_RESULTS_XLSX)
+    return df
