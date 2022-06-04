@@ -13,6 +13,9 @@ loguru = "^0.6.0"
 pydantic = "^1.9.1"
 vdropbox = "^0.2.7"
 vcrypto = "^3.0.0"
+pyarrow = "^8.0.0"
+Pillow = "^9.1.1"
+openpyxl = "^3.0.10"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

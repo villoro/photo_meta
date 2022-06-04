@@ -10,6 +10,7 @@ from vdropbox import Vdropbox
 # It need to go 2 times up since this file has the following relative path:
 #   /src/utils.py
 PATH_ROOT = Path(__file__).parent.parent
+PATH_DROPBOX = "/Photos/METADATA"
 
 
 def get_path(path_relative):

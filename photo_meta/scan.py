@@ -5,10 +5,17 @@ import pandas as pd
 
 from tqdm.notebook import tqdm
 
+import utils as u
+
 from utils import log
 from docs import Doc
 
 REGEX = re.compile(r"(?P<year>\d{4})(_(?P<month>\d{2}))?(_(?P<day>\d{2}))?(.*)")
+
+PATH_FILES = f"{u.PATH_DROPBOX}/files.parquet"
+PATH_FILES_XLSX = f"{u.PATH_DROPBOX}/files.xlsx"
+PATH_SUMMARY = f"{u.PATH_DROPBOX}/summary.parquet"
+PATH_SUMMARY_XLSX = f"{u.PATH_DROPBOX}/summary.xlsx"
 
 
 def get_folder_date(path):
@@ -65,9 +72,30 @@ def read_everything(base_path):
     return pd.DataFrame(out)
 
 
-def summarize(df_in):
+def scan_path(path):
 
-    df = df_in.copy()
+    df = read_everything(path)
+
+    vdp = u.get_vdropbox()
+
+    if vdp.file_exists(PATH_FILES):
+        df_history = vdp.read_parquet(PATH_FILES)
+
+        # Exclude what needs to be updated
+        df_history = df_history[~df_history["folder"].str.startswith(path)]
+        df = pd.concat([df_history, df]).reset_index(drop=True).sort_values(["folder", "name"])
+
+    log.info("Exporting data for scanned files")
+    vdp.write_parquet(df, PATH_FILES)
+    vdp.write_excel(df, PATH_FILES_XLSX)
+    return df
+
+
+def summarize():
+
+    vdp = u.get_vdropbox()
+
+    df = vdp.read_parquet(PATH_FILES)
 
     for col in ["is_image", "error_dt", "error_dt_original", "missing_meta"]:
         df.loc[df[col] == False, col] = None
@@ -84,6 +112,16 @@ def summarize(df_in):
         "error_dt": pd.NamedAgg(column="error_dt", aggfunc="count"),
         "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="count"),
         "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="count"),
+        "updated_at_min": pd.NamedAgg(column="updated_at", aggfunc="min"),
+        "updated_at": pd.NamedAgg(column="updated_at", aggfunc="max"),
     }
 
-    return df.groupby("folder").agg(**aggs).reset_index()
+    # Add scan_time_seconds
+    dfo = df.groupby("folder").agg(**aggs).reset_index()
+    dfo["scan_time_seconds"] = (dfo["updated_at"] - dfo["updated_at_min"]).dt.total_seconds()
+    dfo = dfo.drop("updated_at_min", axis=1)
+
+    log.info("Exporting summary")
+    vdp.write_parquet(dfo, PATH_SUMMARY)
+    vdp.write_excel(dfo, PATH_SUMMARY_XLSX)
+    return dfo
