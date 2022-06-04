@@ -43,3 +43,5 @@ dist/
 # --------------------- PROJECT EXCLUSIONS ------------------------------------
 # Notebooks at src
 photo_meta/*.ipynb
+
+**/logs/*
