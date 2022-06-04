@@ -103,7 +103,7 @@ def summarize():
     vdp = u.get_vdropbox()
     df = vdp.read_parquet(PATH_FILES)
 
-    for col in ["is_image", "error_dt", "error_dt_original", "missing_meta"]:
+    for col in ["is_image", "error_dt", "error_dt_original", "missing_meta", "missing_gps"]:
         df.loc[df[col] == False, col] = None
 
     aggs = {
@@ -160,6 +160,7 @@ def get_results():
     df["error_dt_percent"] = 100 * df["error_dt"] / df["images"]
     df["error_dt_original_percent"] = 100 * df["error_dt_original"] / df["images"]
     df["missing_meta_percent"] = 100 * df["missing_meta"] / df["images"]
+    df["missing_gps_percent"] = 100 * df["missing_gps"] / df["images"]
 
     # Add to history
     if vdp.file_exists(PATH_RESULTS_XLSX):
