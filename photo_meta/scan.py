@@ -118,6 +118,7 @@ def summarize():
         "error_dt": pd.NamedAgg(column="error_dt", aggfunc="count"),
         "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="count"),
         "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="count"),
+        "missing_gps": pd.NamedAgg(column="missing_gps", aggfunc="count"),
         "updated_at_min": pd.NamedAgg(column="updated_at", aggfunc="min"),
         "updated_at": pd.NamedAgg(column="updated_at", aggfunc="max"),
     }
@@ -143,6 +144,7 @@ def get_results():
         "error_dt": pd.NamedAgg(column="error_dt", aggfunc="sum"),
         "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="sum"),
         "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="sum"),
+        "missing_gps": pd.NamedAgg(column="missing_gps", aggfunc="sum"),
         "scan_time_minutes": pd.NamedAgg(column="scan_time_seconds", aggfunc="sum"),
         "updated_at": pd.NamedAgg(column="updated_at", aggfunc="max"),
     }
