@@ -4,9 +4,9 @@ import re
 import pandas as pd
 
 from tqdm.notebook import tqdm
+from exif import Image
 
 import utils as u
-
 from utils import log
 from docs import Doc
 
@@ -16,6 +16,17 @@ PATH_FILES = f"{u.PATH_DROPBOX}/1_files.parquet"
 PATH_FILES_XLSX = f"{u.PATH_DROPBOX}/1_files.xlsx"
 PATH_SUMMARY_XLSX = f"{u.PATH_DROPBOX}/2_summary.xlsx"
 PATH_RESULTS_XLSX = f"{u.PATH_DROPBOX}/3_results.xlsx"
+
+
+def show_file_info(path):
+
+    log.debug(f"Showing info for {path=}")
+
+    with open(path, "rb") as stream:
+        image = Image(stream)
+
+    for name in image.list_all():
+        print(name, "-", image.get(name))
 
 
 def get_folder_date(path):
@@ -32,7 +43,7 @@ def get_folder_date(path):
 
     else:
         log.error(f"Unable to extract data for {folder=}")
-        return -1, False
+        return -1, False, False
 
     log.debug(f"Result: {data=}")
 

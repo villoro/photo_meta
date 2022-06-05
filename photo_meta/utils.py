@@ -26,7 +26,7 @@ def get_path(path_relative):
 
 CONFIG = {
     "handlers": [
-        {"sink": sys.stdout, "level": "ERROR"},
+        {"sink": sys.stdout, "level": "INFO"},
         {"sink": "logs/info.log", "level": "INFO"},
         {"sink": "logs/debug.log", "level": "DEBUG"},
     ]
