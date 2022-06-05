@@ -6,6 +6,10 @@ from exif import Image
 IMAGE_FORMATS = ["jpg", "jpeg"]  # , "png"]
 
 
+def is_image(name):
+    return name.split(".")[-1].lower() in IMAGE_FORMATS
+
+
 class Doc(BaseModel):
     folder: str
     name: str
@@ -39,7 +43,7 @@ class Doc(BaseModel):
 
     @validator("is_image", always=True)
     def get_is_image(cls, v, values):
-        return values["extension"] in IMAGE_FORMATS
+        return is_image(values["name"])
 
     def load(self):
         """Retrive metadata from document"""

@@ -18,7 +18,7 @@ PATH_SUMMARY_XLSX = f"{u.PATH_DROPBOX}/2_summary.xlsx"
 PATH_RESULTS_XLSX = f"{u.PATH_DROPBOX}/3_results.xlsx"
 
 
-def show_file_info(path):
+def show_file_info(path, only_date=False):
 
     log.debug(f"Showing info for {path=}")
 
@@ -26,6 +26,9 @@ def show_file_info(path):
         image = Image(stream)
 
     for name in image.list_all():
+        if only_date and not name.startswith("datetime"):
+            continue
+
         print(name, "-", image.get(name))
 
 

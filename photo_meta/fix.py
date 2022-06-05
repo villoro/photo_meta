@@ -34,8 +34,8 @@ def update_one_meta(path, set_date, dry_run=True):
     for field in ["datetime", "datetime_original"]:
 
         try:
-            value = image.get(field)
-        except KeyError:
+            value = image[field]
+        except (KeyError, AttributeError):
             approx_date = get_approx_date(set_date)
 
             log.warning(f"{field=} not found in {path=}. Setting default '{approx_date}'")
@@ -59,7 +59,7 @@ def update_one_meta(path, set_date, dry_run=True):
     return bool(updated)
 
 
-def get_all_files_in_path(base_path, verbose=False, dry_run=True):
+def update_all_in_path(base_path, verbose=False, dry_run=True):
 
     log.info(f"Starting process for {base_path=} and {dry_run=}")
 
