@@ -10,7 +10,7 @@ import utils as u
 from utils import log
 from docs import Doc
 
-REGEX = re.compile(r"(?P<year>\d{4})(_(?P<month>\d{2}))?(_(?P<day>\d{2}))?(.*)")
+REGEX = re.compile(r"(?P<skip>_)?(?P<year>\d{4})(_(?P<month>\d{2}))?(_(?P<day>\d{2}))?(.*)")
 
 PATH_FILES = f"{u.PATH_DROPBOX}/1_files.parquet"
 PATH_FILES_XLSX = f"{u.PATH_DROPBOX}/1_files.xlsx"
@@ -44,7 +44,7 @@ def get_folder_date(path):
         if (value is not None) and (int(value) > 0):
             out += f":{value}"
 
-    return level, out
+    return level, out, bool(data["skip"])
 
 
 def read_everything(base_path):
@@ -61,12 +61,14 @@ def read_everything(base_path):
         path = path.replace("\\", "/")
         log.debug(f"Scanning {path=} with {len(files)} files")
 
-        level, folder_date = get_folder_date(path)
+        level, folder_date, skip = get_folder_date(path)
 
         for file in files:
             log.debug(f"Loading {path=} {file=}")
 
-            data = Doc(folder=path, name=file, folder_date=folder_date, level=level).load()
+            data = Doc(
+                folder=path, name=file, folder_date=folder_date, level=level, skip=skip
+            ).load()
             out.append(data)
 
     return pd.DataFrame(out)
@@ -91,6 +93,10 @@ def scan_path(path, export_excel=False):
         df_history = df_history[~df_history["folder"].str.startswith(path)]
         df = pd.concat([df_history, df]).reset_index(drop=True).sort_values(["folder", "name"])
 
+    # Path as index
+    df["uri"] = df["folder"] + "/" + df["name"]
+    df = df.set_index("uri")
+
     log.info("Exporting data for scanned files")
     vdp.write_parquet(df, PATH_FILES)
     if export_excel:
@@ -98,10 +104,26 @@ def scan_path(path, export_excel=False):
     return df
 
 
+def cast_dates(df_in):
+    df = df_in.copy()
+
+    for col in ["datetime", "datetime_original"]:
+        dt = pd.to_datetime(df[col], format="%Y:%m:%d %H:%M:%S", errors="coerce")
+
+        df[col] = pd.to_datetime(df[col], format="%Y:%m:%d", errors="coerce")
+
+        mask = ~dt.isna()
+        df.loc[mask, col] = dt.loc[mask]
+
+    return df
+
+
 def summarize():
 
     vdp = u.get_vdropbox()
     df = vdp.read_parquet(PATH_FILES)
+
+    df = cast_dates(df)
 
     for col in ["is_image", "error_dt", "error_dt_original", "missing_meta", "missing_gps"]:
         df.loc[df[col] == False, col] = None
@@ -115,6 +137,7 @@ def summarize():
         "images": pd.NamedAgg(column="is_image", aggfunc="count"),
         "files": pd.NamedAgg(column="name", aggfunc="count"),
         "level": pd.NamedAgg(column="level", aggfunc="max"),
+        "skip": pd.NamedAgg(column="skip", aggfunc="max"),
         "error_dt": pd.NamedAgg(column="error_dt", aggfunc="count"),
         "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="count"),
         "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="count"),
@@ -141,6 +164,7 @@ def get_results():
         "folders": pd.NamedAgg(column="folder", aggfunc="count"),
         "images": pd.NamedAgg(column="images", aggfunc="sum"),
         "files": pd.NamedAgg(column="files", aggfunc="sum"),
+        "skip": pd.NamedAgg(column="skip", aggfunc="sum"),
         "error_dt": pd.NamedAgg(column="error_dt", aggfunc="sum"),
         "error_dt_original": pd.NamedAgg(column="error_dt_original", aggfunc="sum"),
         "missing_meta": pd.NamedAgg(column="missing_meta", aggfunc="sum"),

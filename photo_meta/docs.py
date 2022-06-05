@@ -12,6 +12,7 @@ class Doc(BaseModel):
     extension: str = None
     is_image: bool = False
     level: int = -1
+    skip: bool = False
     # Dates
     datetime: str = ""
     datetime_original: str = ""
@@ -72,8 +73,10 @@ class Doc(BaseModel):
                     setattr(self, field, value)
 
             self.missing_gps = not (self.gps_latitude or self.gps_longitude)
-            self.error_dt = not self.datetime.startswith(self.folder_date)
-            self.error_dt_original = not self.datetime_original.startswith(self.folder_date)
+            self.error_dt = not (self.datetime.startswith(self.folder_date) or self.skip)
+            self.error_dt_original = not (
+                self.datetime_original.startswith(self.folder_date) or self.skip
+            )
 
         # Simplify processing by returning the data as dict here
         return self.dict()
