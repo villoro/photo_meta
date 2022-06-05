@@ -22,6 +22,33 @@ def get_approx_date(value):
     return value
 
 
+def set_dt_from_dt_original(folder):
+
+    updated = 0
+
+    for file in os.listdir(folder):
+        path = f"{folder}/{file}"
+
+        if not is_image(file):
+            log.debug(f"Skipping {file=}")
+            continue
+
+        with open(path, "rb") as stream:
+            image = Image(stream)
+
+        dt_original = image.get("datetime_original")
+        dt = image.get("datetime")
+
+        if dt_original and not dt.startswith(dt_original):
+            updated += 1
+            image["datetime"] = dt_original
+
+            with open(path, "wb") as stream:
+                stream.write(image.get_file())
+
+    log.info(f"{folder=} {updated=}")
+
+
 def update_one_meta(path, set_date, dry_run=True):
 
     log.debug(f"Updating metadata for {path=} with {set_date=}")
