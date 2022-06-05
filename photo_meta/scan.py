@@ -165,6 +165,8 @@ def summarize():
     dfo["scan_time_seconds"] = (dfo["updated_at"] - dfo["updated_at_min"]).dt.total_seconds()
     dfo = dfo.drop("updated_at_min", axis=1)
 
+    dfo["unit"] = dfo["folder"].str[:1]
+
     log.info("Exporting summary")
     vdp.write_excel(fix_unicode(dfo.set_index("folder", drop=True)), PATH_SUMMARY_XLSX)
     return dfo

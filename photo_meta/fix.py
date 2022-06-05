@@ -6,7 +6,7 @@ from tqdm.notebook import tqdm
 
 from utils import log
 from docs import is_image
-from scan import get_folder_date
+from scan import get_folder_date, scan_path
 
 
 def get_approx_date(value):
@@ -39,14 +39,15 @@ def set_dt_from_dt_original(folder):
         dt_original = image.get("datetime_original")
         dt = image.get("datetime")
 
-        if dt_original and not dt.startswith(dt_original):
+        if dt_original and dt and not dt.startswith(dt_original):
             updated += 1
             image["datetime"] = dt_original
 
             with open(path, "wb") as stream:
                 stream.write(image.get_file())
 
-    log.info(f"{folder=} {updated=}")
+    log.success(f"{folder=} {updated=}")
+    scan_path(folder)
 
 
 def update_one_meta(path, set_date, dry_run=True):
@@ -125,6 +126,6 @@ def update_all_in_path(base_path, verbose=False, dry_run=True):
             if result:
                 log.info(f"{file=} updated")
 
-        log.info(f"In {root=} {files_updated=}")
+        log.success(f"In {root=} {files_updated=}")
 
     log.info(f"Exporting results")
